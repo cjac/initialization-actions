@@ -58,30 +58,31 @@ function install_apt_get() {
 }
 
 function configure_admin() {
-  sed -i 's/^db_root_password=/db_root_password=root-password/' \
+  MYSQL_ROOT_PW=$(cat /etc/mysql/my.cnf | grep password | cut -f2 -d=)
+  sed -i "s/^db_root_password=.*$/db_root_password=${MYSQL_ROOT_PW}/" \
     "${RANGER_INSTALL_DIR}/ranger-admin/install.properties"
-  sed -i 's/^db_password=/db_password=rangerpass/' \
+  sed -i 's/^db_password=.*$/db_password=rangerpass/' \
     "${RANGER_INSTALL_DIR}/ranger-admin/install.properties"
-  sed -i "s/^rangerAdmin_password=/rangerAdmin_password=${RANGER_ADMIN_PASS}/" \
+  sed -i "s/^rangerAdmin_password=.*$/rangerAdmin_password=${RANGER_ADMIN_PASS}/" \
     "${RANGER_INSTALL_DIR}/ranger-admin/install.properties"
-  sed -i 's/^audit_solr_user=/audit_solr_user=solr/' \
+  sed -i 's/^audit_solr_user=.*$/audit_solr_user=solr/' \
     "${RANGER_INSTALL_DIR}/ranger-admin/install.properties"
   bdconfig set_property \
     --configuration_file "${RANGER_INSTALL_DIR}/ranger-admin/ews/webapp/WEB-INF/classes/conf.dist/ranger-admin-site.xml" \
     --name 'ranger.service.http.port' --value "${RANGER_ADMIN_PORT}" \
     --clobber
-  mysql -u root -proot-password -e "CREATE USER 'rangeradmin'@'localhost' IDENTIFIED BY 'rangerpass';"
-  mysql -u root -proot-password -e "CREATE DATABASE ranger;"
-  mysql -u root -proot-password -e "GRANT ALL PRIVILEGES ON ranger.* TO 'rangeradmin'@'localhost';"
+  mysql -u root -e "CREATE USER 'rangeradmin'@'localhost' IDENTIFIED BY 'rangerpass';"
+  mysql -u root -e "CREATE DATABASE ranger;"
+  mysql -u root -e "GRANT ALL PRIVILEGES ON ranger.* TO 'rangeradmin'@'localhost';"
 
   if [[ "${MASTER_ADDITIONAL}" != "" ]]; then
-    sed -i "s/^audit_solr_zookeepers=/audit_solr_zookeepers=${CLUSTER_NAME}-m-0:2181,${CLUSTER_NAME}-m-1:2181,${CLUSTER_NAME}-m-2:2181\/solr/" \
+    sed -i "s/^audit_solr_zookeepers=.*$/audit_solr_zookeepers=${CLUSTER_NAME}-m-0:2181,${CLUSTER_NAME}-m-1:2181,${CLUSTER_NAME}-m-2:2181\/solr/" \
       "${RANGER_INSTALL_DIR}/ranger-admin/install.properties"
-    sed -i 's/^audit_solr_urls=/audit_solr_urls=none/' \
+    sed -i 's/^audit_solr_urls=.*$/audit_solr_urls=none/' \
       "${RANGER_INSTALL_DIR}/ranger-admin/install.properties"
     runuser -l solr -s /bin/bash -c "${SOLR_HOME}/bin/solr create_collection -c ranger_audits -d ${RANGER_INSTALL_DIR}/ranger-admin/contrib/solr_for_audit_setup/conf -shards 1 -replicationFactor 3"
   else
-    sed -i 's/^audit_solr_urls=/audit_solr_urls=http:\/\/localhost:8983\/solr\/ranger_audits/' \
+    sed -i 's/^audit_solr_urls=.*$/audit_solr_urls=http:\/\/localhost:8983\/solr\/ranger_audits/' \
       "${RANGER_INSTALL_DIR}/ranger-admin/install.properties"
     runuser -l solr -s /bin/bash -c "${SOLR_HOME}/bin/solr create_core -c ranger_audits -d ${RANGER_INSTALL_DIR}/ranger-admin/contrib/solr_for_audit_setup/conf -shards 1 -replicationFactor 1"
   fi
@@ -100,7 +101,7 @@ function add_usersync_plugin() {
 
   sed -i 's/^logdir=logs/logdir=\/var\/log\/ranger-usersync/' \
     "${RANGER_INSTALL_DIR}/ranger-usersync/install.properties"
-  sed -i "s/^POLICY_MGR_URL =/POLICY_MGR_URL = http:\/\/localhost:${RANGER_ADMIN_PORT}/" \
+  sed -i "s/^POLICY_MGR_URL =.*$/POLICY_MGR_URL = http:\/\/localhost:${RANGER_ADMIN_PORT}/" \
     "${RANGER_INSTALL_DIR}/ranger-usersync/install.properties"
 
   pushd "${RANGER_INSTALL_DIR}/ranger-usersync" && ./setup.sh
@@ -117,9 +118,9 @@ function add_usersync_plugin() {
 function apply_common_plugin_configuration() {
   local plugin_name="${1}"
   local service_name="${2}"
-  sed -i "s/^POLICY_MGR_URL=/POLICY_MGR_URL=http:\/\/localhost:${RANGER_ADMIN_PORT}/" \
+  sed -i "s/^POLICY_MGR_URL=.*$/POLICY_MGR_URL=http:\/\/localhost:${RANGER_ADMIN_PORT}/" \
     "${RANGER_INSTALL_DIR}/${plugin_name}/install.properties"
-  sed -i "s/^REPOSITORY_NAME=/REPOSITORY_NAME=${service_name}/" \
+  sed -i "s/^REPOSITORY_NAME=.*$/REPOSITORY_NAME=${service_name}/" \
     "${RANGER_INSTALL_DIR}/${plugin_name}/install.properties"
   sed -i 's/^XAAUDIT.SOLR.ENABLE=false/XAAUDIT.SOLR.ENABLE=true/' \
     "${RANGER_INSTALL_DIR}/${plugin_name}/install.properties"
