@@ -58,3 +58,4 @@ gcloud dataproc clusters create ${CLUSTER_NAME} \
   * To install the other required R libraries (mplot and rCharts), uncomment lines after "Uncomment here" in zeppelin.sh.
   * There are still some issues with examples in the R Tutorial (under investation).
 * The Hive interpreter in missing in Dataproc 1.1.
+
