@@ -111,7 +111,6 @@ readonly DEFAULT_DRIVER=${DRIVER_FOR_CUDA["${CUDA_VERSION}"]}
 DRIVER_VERSION=$(get_metadata_attribute 'gpu-driver-version' "${DEFAULT_DRIVER}")
 if is_debian11 || is_ubuntu22 || is_ubuntu20 ; then DRIVER_VERSION="560.28.03" ; fi
 if is_ubuntu20 && is_cuda11 ; then DRIVER_VERSION="535.183.06" ; fi
-#if is_ubuntu22 && is_cuda11 ; then DRIVER_VERSION="550.90.07" ; fi # no driver of this version that matches cuda11
 
 readonly DRIVER_VERSION
 readonly DRIVER=${DRIVER_VERSION%%.*}
@@ -340,18 +339,20 @@ function install_nvidia_nccl() {
   local -r nccl_version="${NCCL_VERSION}-1+cuda${CUDA_VERSION}"
 
   if is_rocky ; then
-    execute_with_retries "dnf -y -q install libnccl-${nccl_version} libnccl-devel-${nccl_version} libnccl-static-${nccl_version}"
+    time execute_with_retries \
+      "dnf -y -q install" \
+        "libnccl-${nccl_version} libnccl-devel-${nccl_version} libnccl-static-${nccl_version}"
   elif is_ubuntu ; then
     install_cuda_keyring_pkg
 
     apt-get update -qq
 
     if is_ubuntu18 ; then
-      execute_with_retries \
+      time execute_with_retries \
         "apt-get install -q -y " \
           "libnccl2 libnccl-dev"
     else
-      execute_with_retries \
+      time execute_with_retries \
         "apt-get install -q -y " \
           "libnccl2=${nccl_version} libnccl-dev=${nccl_version}"
     fi
@@ -973,6 +974,7 @@ function main() {
   if is_debian || is_ubuntu ; then
     export DEBIAN_FRONTEND=noninteractive
     execute_with_retries "apt-get install -y -qq pciutils linux-headers-${uname_r}"
+
   elif is_rocky ; then
     execute_with_retries "dnf -y -q update --exclude=systemd*,kernel*"
     execute_with_retries "dnf -y -q install pciutils gcc"
